@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>Converter Pro | Final Version</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Light Theme */
+            --color-primary-action: #d93737;
+            --color-primary-action-hover: #c22a2a;
+            --color-success: #198754;
+            --color-header-bg: rgba(255, 255, 255, 0.8);
+            --color-bg: #f4f7f9;
+            --color-surface: #ffffff;
+            --color-border: #e0e5ea;
+            --color-dropzone-bg: #f8f9fa;
+            --color-text-primary: #1c1d1f;
+            --color-text-secondary: #5a6470;
+            --color-text-on-action: #ffffff;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                /* Dark Theme */
+                --color-primary-action: #e74c3c;
+                --color-primary-action-hover: #ff5b5b;
+                --color-success: #20c997;
+                --color-header-bg: rgba(28, 29, 31, 0.7);
+                --color-bg: #111315;
+                --color-surface: #1c1d1f;
+                --color-border: #33383f;
+                --color-dropzone-bg: #2a2d31;
+                --color-text-primary: #f4f7f9;
+                --color-text-secondary: #9ba6b3;
+                --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+                --shadow-md: 0 5px 25px rgba(0, 0, 0, 0.2);
+            }
+        }
+        
+        /* NEW: Added for smooth scrolling behavior */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            background-color: var(--color-bg);
+            color: var(--color-text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container { width: 100%; max-width: 900px; margin: 0 auto; padding: 0 1.5rem; }
+
+        .site-header {
+            background-color: var(--color-header-bg);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--color-border);
+            position: sticky; top: 0; z-index: 10;
+        }
+        .logo { font-size: 1.5rem; font-weight: 700; color: var(--color-text-primary); }
+
+        .converter-section { padding: 5rem 0; text-align: center; }
+        .converter-section h1 { font-size: 2.75rem; font-weight: 700; margin-bottom: 1rem; }
+        .converter-section p { font-size: 1.125rem; color: var(--color-text-secondary); max-width: 550px; margin: 0 auto 2.5rem; }
+
+        #drop-zone {
+            background: var(--color-surface);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            transition: all 0.3s ease;
+        }
+        #drop-zone-inner {
+            border: 2px dashed var(--color-border);
+            border-radius: 12px;
+            padding: 3rem 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            background: var(--color-dropzone-bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        #drop-zone.drag-over #drop-zone-inner {
+            border-color: var(--color-primary-action);
+            background-color: rgba(217, 55, 55, 0.05);
+            transform: scale(1.02);
+        }
+        .drop-zone-icon { margin-bottom: 1rem; color: var(--color-primary-action); }
+        .drop-zone-text strong { font-size: 1.1rem; color: var(--color-text-primary); }
+        .drop-zone-text p { margin: 0.5rem 0 0; color: var(--color-text-secondary); }
+        #file-count { color: var(--color-text-secondary); font-weight: 500; margin-left: 0.5rem; }
+
+        .preview-section { padding: 3rem 0; display: none; }
+        .preview-section.visible { display: block; }
+        #preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
+        .preview-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: fadeIn 0.5s ease forwards;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .preview-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+        .preview-card.removing { animation: fadeOut 0.4s ease forwards; }
+        .file-icon { color: var(--color-text-secondary); }
+        .file-meta .name { font-weight: 500; }
+        .file-meta .status { font-size: 0.875rem; color: var(--color-success); font-weight: 500; display: flex; align-items: center; gap: 0.25rem; }
+        .remove-btn { position: absolute; top: 0.75rem; right: 0.75rem; background: transparent; border: none; cursor: pointer; color: var(--color-text-secondary); transition: color 0.2s; }
+        .remove-btn:hover { color: var(--color-primary-action); }
+
+        .site-footer { text-align: center; padding: 3rem 0; color: var(--color-text-secondary); }
+
+        .action-button { background-color: var(--color-primary-action); color: var(--color-text-on-action); border-radius: 50px; font-weight: 600; text-decoration: none; border: none; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .action-button:hover { background-color: var(--color-primary-action-hover); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .loader { display: none; margin: 1rem auto 0; border: 4px solid var(--color-border); border-radius: 50%; border-top-color: var(--color-primary-action); width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            .container { padding: 0 1rem; }
+            .converter-section { padding: 3rem 0; }
+            .converter-section h1 { font-size: 2.25rem; }
+            #drop-zone { padding: 1rem; }
+            #drop-zone-inner { padding: 2rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="site-header"><div class="container"><span class="logo">Converter Pro</span></div></header>
+
+    <main>
+        <section class="converter-section">
+            <div class="container">
+                <h1>The Ultimate PNG to ICO Converter</h1>
+                <p>High-quality, private, and fast. Convert multiple PNGs to ICO format directly in your browser.</p>
+                <div id="drop-zone">
+                    <div id="drop-zone-inner">
+                        <div class="drop-zone-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 256 256"><path d="M208,88H152V32a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8V88H48a8,8,0,0,0-5.66,13.66l80,80a8,8,0,0,0,11.32,0l80-80A8,8,0,0,0,208,88Zm-5.66,8L128,170.34,53.66,96ZM240,184a8,8,0,0,1-8,8H24a8,8,0,0,1,0-16H232A8,8,0,0,1,240,184Z"></path></svg>
+                        </div>
+                        <div class="drop-zone-text">
+                            <strong>Drag & Drop Files Here</strong>
+                            <p>or click to select files</p>
+                        </div>
+                    </div>
+                </div>
+                <input type="file" id="png-input" accept="image/png" multiple style="display: none;">
+            </div>
+        </section>
+
+        <section class="preview-section" id="preview-area">
+            <div class="container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3>Conversion Queue <span id="file-count"></span></h3>
+                    <button id="clear-all-btn" style="background:none; border:none; color:var(--color-link); font-weight:600; cursor:pointer;">Clear All</button>
+                </div>
+                <div id="preview-grid"></div>
+                <!-- This is the target for the auto-scroll -->
+                <div id="action-area" style="text-align: center; margin-top: 2.5rem;">
+                    <button id="download-button" class="action-button" style="display: none; padding: 1rem 3rem; font-size: 1.1rem;"></button>
+                    <div class="loader" id="loader"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer"><div class="container">&copy; 2025 Converter Pro. All files are processed on your device for 100% privacy.</div></footer>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const dropZoneInner = document.getElementById('drop-zone-inner');
+        const pngInput = document.getElementById('png-input');
+        const previewGrid = document.getElementById('preview-grid');
+        const previewArea = document.getElementById('preview-area');
+        const downloadButton = document.getElementById('download-button');
+        const loader = document.getElementById('loader');
+        const clearAllBtn = document.getElementById('clear-all-btn');
+        const fileCountSpan = document.getElementById('file-count');
+        // NEW: Get the action area element
+        const actionArea = document.getElementById('action-area');
+
+        let fileQueue = [];
+
+        dropZoneInner.addEventListener('click', () => pngInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
+        pngInput.addEventListener('change', () => handleFiles(pngInput.files));
+
+        const updateUI = () => {
+            if (fileQueue.length === 0) {
+                previewArea.classList.remove('visible');
+                downloadButton.style.display = 'none';
+                fileCountSpan.textContent = '';
+                pngInput.value = '';
+                return;
+            }
+            previewArea.classList.add('visible');
+            downloadButton.style.display = 'inline-flex';
+
+            const fileText = fileQueue.length === 1 ? 'File' : 'Files';
+            const itemText = fileQueue.length === 1 ? 'item' : 'items';
+            fileCountSpan.textContent = `(${fileQueue.length} ${itemText})`;
+            downloadButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M208,88H152V32a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8V88H48a8,8,0,0,0-5.66,13.66l80,80a8,8,0,0,0,11.32,0l80-80A8,8,0,0,0,208,88Zm-5.66,8L128,170.34,53.66,96ZM240,184a8,8,0,0,1-8,8H24a8,8,0,0,1,0-16H232A8,8,0,0,1,240,184Z"></path></svg><span>Convert ${fileQueue.length} ${fileText}</span>`;
+        };
+
+        // --- MODIFIED: The handleFiles function now includes the auto-scroll logic ---
+        const handleFiles = (files) => {
+            const wasQueueEmpty = fileQueue.length === 0;
+            const newFiles = Array.from(files).filter(f => f.type === 'image/png');
+
+            if (newFiles.length === 0) return;
+
+            newFiles.forEach(file => {
+                const fileWrapper = { id: Date.now() + Math.random(), file: file, baseName: file.name.replace(/\.png$/i, '') };
+                fileQueue.push(fileWrapper);
+                createPreviewCard(fileWrapper);
+            });
+            updateUI();
+
+            // If this was the first batch of files, scroll to the button
+            if (wasQueueEmpty) {
+                setTimeout(() => {
+                    actionArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100); // Small delay to allow UI to render
+            }
+        };
+        
+        const createPreviewCard = (fw) => {
+            const card = document.createElement('div');
+            card.className = 'preview-card';
+            card.dataset.id = fw.id;
+            card.innerHTML = `
+                <div class="file-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V162.94l-43.22-34.57a16,16,0,0,0-21.53.53L88,181.1,64.43,163.57a16,16,0,0,0-20.94.4L32,184.84V56H216ZM40,200l48.82-35.84,27.1,21.68a16,16,0,0,0,20.94-.4L181.1,142.87,224,175.49V200ZM180,96a12,12,0,1,1-12-12A12,12,0,0,1,180,96Z"></path></svg>
+                </div>
+                <div class="file-meta" style="flex: 1;">
+                    <div class="name">${fw.file.name}</div>
+                    <div class="status">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path></svg>
+                        Ready
+                    </div>
+                </div>
+                <button class="remove-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+                </button>`;
+            previewGrid.appendChild(card);
+        };
+        
+        const clearQueue = () => {
+            Array.from(previewGrid.children).forEach((card, index) => setTimeout(() => card.classList.add('removing'), index * 50));
+            setTimeout(() => {
+                fileQueue = [];
+                previewGrid.innerHTML = '';
+                updateUI();
+            }, fileQueue.length * 50 + 400);
+        };
+
+        previewGrid.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('.remove-btn');
+            if (removeBtn) {
+                const card = removeBtn.closest('.preview-card');
+                const fileId = parseFloat(card.dataset.id);
+                fileQueue = fileQueue.filter(fw => fw.id !== fileId);
+                card.classList.add('removing');
+                card.addEventListener('animationend', () => { card.remove(); updateUI(); });
+            }
+        });
+
+        clearAllBtn.addEventListener('click', clearQueue);
+        
+        downloadButton.addEventListener('click', async () => {
+            if (fileQueue.length === 0) return;
+            loader.style.display = 'block';
+            downloadButton.style.display = 'none';
+            const zip = new JSZip();
+            const conversionPromises = fileQueue.map(fw => new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const image = new Image();
+                    image.src = e.target.result;
+                    image.onload = () => createIco(image).then(icoBlob => {
+                        zip.file(`${fw.baseName}.ico`, icoBlob);
+                        resolve();
+                    });
+                };
+                reader.readAsDataURL(fw.file);
+            }));
+            await Promise.all(conversionPromises);
+            zip.generateAsync({ type: "blob" }).then(content => {
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'converted_icons.zip';
+                a.click();
+                URL.revokeObjectURL(url);
+                loader.style.display = 'none';
+                clearQueue();
+            });
+        });
+
+        function resizeImage(img, targetSize) { let c=document.createElement('canvas'),x=c.getContext('2d');c.width=img.width;c.height=img.height;x.drawImage(img,0,0);let w=img.width,h=img.height;while(w/2>=targetSize){let W=Math.floor(w/2),H=Math.floor(h/2),t=document.createElement('canvas');t.width=W;t.height=H;t.getContext('2d').drawImage(c,0,0,w,h,0,0,W,H);c=t;w=W;h=H;}let f=document.createElement('canvas');f.width=targetSize;f.height=targetSize;let F=f.getContext('2d');F.imageSmoothingQuality='high';F.drawImage(c,0,0,w,h,0,0,targetSize,targetSize);return f;} async function createIco(sourceImage) { const sizes=[16,32,48,64,128,256];const imageEntries=[];let totalOffset=6+(sizes.length*16);for(const size of sizes){const resizedCanvas=resizeImage(sourceImage,size);const pngBlob=await new Promise(resolve=>resizedCanvas.toBlob(resolve,'image/png'));const pngBuffer=await pngBlob.arrayBuffer();imageEntries.push({width:size,height:size,colorPlanes:0,bitsPerPixel:32,size:pngBuffer.byteLength,offset:totalOffset,buffer:pngBuffer});totalOffset+=pngBuffer.byteLength;}const icoBuffer=new ArrayBuffer(totalOffset);const view=new DataView(icoBuffer);let offset=0;view.setUint16(offset,0,true);view.setUint16(offset+2,1,true);view.setUint16(offset+4,sizes.length,true);offset+=6;for(const entry of imageEntries){view.setUint8(offset,entry.width===256?0:entry.width);view.setUint8(offset+1,entry.height===256?0:entry.height);view.setUint8(offset+2,0);view.setUint8(offset+3,0);view.setUint16(offset+4,entry.colorPlanes,true);view.setUint16(offset+6,entry.bitsPerPixel,true);view.setUint32(offset+8,entry.size,true);view.setUint32(offset+12,entry.offset,true);offset+=16;}for(const entry of imageEntries){const sourceView=new Uint8Array(entry.buffer);const destView=new Uint8Array(icoBuffer,entry.offset,entry.size);destView.set(sourceView);}return new Blob([icoBuffer],{type:'image/x-icon'});}
+    </script>
+</body>
+</html>
