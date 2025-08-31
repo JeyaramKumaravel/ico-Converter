@@ -1,6 +1,6 @@
 # Converter Pro: A Modern PNG to ICO Web Application
 
-![Converter Pro Screenshot](image)
+![Converter Pro Screenshot](Screenshot.png)
 
 Converter Pro is a fully-featured, client-side web application for converting PNG images to the ICO format. Built with vanilla HTML, CSS, and JavaScript, it requires no server-side processing, ensuring 100% user privacy. The application features a modern, responsive user interface that automatically adapts to the user's system theme (light or dark mode).
 
@@ -59,5 +59,6 @@ The conversion process is handled entirely in the user's browser in a few key st
 This project is open-source and available under the **MIT License**. See the [LICENSE](LICENSE) file for more info.
 
 ---
+
 
 _Feel free to fork this repository, make it your own, or contribute to its development!_
